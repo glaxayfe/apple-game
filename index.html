@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>사과게임 🍎</title>
+    <title>사과게임 🍎 (90초 스피드전)</title>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         
@@ -64,7 +64,7 @@
 
     <div id="header">
         <div class="score-box">SCORE: <span id="score">0</span></div>
-        <div class="time-box">⏳ <span id="time">120</span>초</div>
+        <div class="time-box">⏳ <span id="time">90</span>초</div>
     </div>
 
     <div id="board-container">
@@ -75,7 +75,7 @@
     <div class="panel" id="startPanel">
         <h1>사과게임 🍎</h1>
         <p>드래그해서 네모 칸을 만드세요!<br>선택된 사과 숫자의 합이 <b>정확히 10</b>이 되면<br>사과가 터지면서 점수를 얻습니다.</p>
-        <button onclick="startGame()">▶ 게임 시작</button>
+        <button onclick="startGame()">▶ 90초 게임 시작</button>
         <button onclick="showLeaderboard()" class="alt-btn">🏆 실시간 랭킹 보기</button>
     </div>
 
@@ -108,7 +108,7 @@
     let startX = -1, startY = -1;
     let currentX = -1, currentY = -1;
     let score = 0;
-    let timeLeft = 120;
+    let timeLeft = 90; // 90초로 수정 완료
     let timerId = null;
     let isPlaying = false;
 
@@ -118,7 +118,7 @@
         board.innerHTML = '';
         apples = [];
         score = 0;
-        timeLeft = 120;
+        timeLeft = 90; // 90초로 수정 완료
         document.getElementById('score').innerText = score;
         document.getElementById('time').innerText = timeLeft;
         
@@ -269,7 +269,7 @@
 
     function closeLeaderboard() {
         document.getElementById('leaderboardPanel').style.display = 'none';
-        if (!isPlaying && timeLeft === 120) { 
+        if (!isPlaying && timeLeft === 90) {  // 90초로 수정 완료
             document.getElementById('startPanel').style.display = 'block';
         }
     }
