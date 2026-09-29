@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>사과게임 (Apple Game)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Jua', sans-serif;
+            background-color: #fef3c7; /* Tailwind amber-50 */
+            touch-action: none; /* Prevent scroll while playing */
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+        
+        .heading-font { font-family: 'Jua', sans-serif; }
+        .num-font { font-family: 'Nunito', sans-serif; }
+
+        /* Game Grid Layout */
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(17, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+            gap: 2px;
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 17 / 10;
+            position: relative;
+            background: white;
+            padding: 4px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        /* Apple Styling */
+        .apple {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #ef4444; /* red-500 */
+            border-radius: 50%;
+            color: white;
+            font-size: clamp(10px, 3vw, 24px);
+            font-weight: 700;
+            box-shadow: inset -2px -4px 6px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.1s, opacity 0.3s;
+            cursor: pointer;
+        }
+        
+        /* Cute Leaf */
+        .apple::after {
+            content: '';
+            position: absolute;
+            top: -10%;
+            right: 20%;
+            width: 30%;
+            height: 30%;
+            background-color: #22c55e; /* green-500 */
+            border-radius: 0 50% 0 50%;
+            box-shadow: inset -1px -1px 2px rgba(0,0,0,0.2);
+        }
+
+        .apple.selected {
+            transform: scale(0.9);
+            filter: brightness(1.2);
+        }
+
+        .apple.cleared {
+            opacity: 0;
+            transform: scale(0);
+            pointer-events: none;
+        }
+
+        /* Selection Box */
+        #selection-box {
+            position: absolute;
+            background-color: rgba(59, 130, 246, 0.4);
+            border: 2px dashed #2563eb;
+            pointer-events: none; /* Let events pass through to board */
+            display: none;
+            z-index: 10;
+            border-radius: 4px;
+        }
+
+        /* Custom Scrollbar for Leaderboard */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        
+        /* Modals */
+        .modal {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center h-screen w-screen p-2 text-slate-800">
+
+    <!-- GAME UI SCREEN (Always in background) -->
+    <div class="w-full max-w-[900px] flex flex-col items-center flex-1 py-4 justify-center">
+        
+        <!-- Header HUD -->
+        <div class="w-full flex justify-between items-center mb-4 px-4 bg-white/80 rounded-2xl shadow-sm p-3 border border-amber-200">
+            <div class="flex flex-col items-start">
+                <span class="text-amber-700 text-sm">시간 (Time)</span>
+                <span id="time-display" class="num-font text-3xl font-bold text-rose-500">120</span>
+            </div>
+            
+            <div class="text-center">
+                <h1 class="heading-font text-2xl md:text-3xl text-rose-600 drop-shadow-sm">🍎 텐텐 사과게임</h1>
+                <p id="sum-preview" class="text-sm font-bold text-blue-500 opacity-0 transition-opacity">합계: 0</p>
+            </div>
+            
+            <div class="flex flex-col items-end">
+                <span class="text-amber-700 text-sm">점수 (Score)</span>
+                <span id="score-display" class="num-font text-3xl font-bold text-blue-600">0</span>
+            </div>
+        </div>
+
+        <!-- The 17x10 Grid Container -->
+        <div id="game-board">
+            <div id="selection-box"></div>
+            <!-- Apples will be injected here via JS -->
+        </div>
+        
+        <div class="mt-4 text-center text-amber-800 text-sm">
+            마우스나 손가락으로 드래그해서 <b>합이 10</b>이 되게 만드세요!
+        </div>
+    </div>
+
+    <!-- START SCREEN OVERLAY -->
+    <div id="start-screen" class="modal absolute inset-0 z-40 flex flex-col items-center justify-center p-4">
+        <h1 class="heading-font text-5xl md:text-7xl text-rose-500 mb-2 drop-shadow-md text-center">🍎 사과게임</h1>
+        <p class="text-amber-800 mb-6 text-center text-lg">드래그해서 사과의 합을 <b>10</b>으로 만들어 터트리세요!<br>제한시간: 120초</p>
+        
+        <button id="start-btn" class="bg-rose-500 hover:bg-rose-600 text-white text-3xl py-3 px-12 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 mb-8">
+            게임 시작
+        </button>
+
+        <div class="bg-white border-2 border-amber-200 rounded-2xl p-5 w-full max-w-sm shadow-sm">
+            <h2 class="heading-font text-2xl text-center text-amber-700 mb-3 border-b border-amber-100 pb-2">🏆 실시간 랭킹 (TOP 10)</h2>
+            <div id="start-leaderboard" class="custom-scrollbar overflow-y-auto max-h-[30vh] space-y-2">
+                <div class="text-center text-slate-400 py-4">랭킹을 불러오는 중...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME OVER SCREEN OVERLAY -->
+    <div id="game-over-screen" class="modal absolute inset-0 z-50 hidden flex-col items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white border-4 border-rose-300 rounded-3xl p-8 max-w-sm w-full mx-4 flex flex-col items-center shadow-2xl transform scale-95 transition-transform duration-300" id="game-over-content">
+            <h2 class="heading-font text-5xl text-rose-500 mb-2">TIME OVER!</h2>
+            
+            <div class="bg-amber-50 w-full rounded-2xl p-4 text-center mb-6 border border-amber-200">
+                <div class="text-sm text-amber-700 mb-1">최종 점수 (Final Score)</div>
+                <div id="final-score-display" class="num-font text-6xl text-blue-600">0</div>
+            </div>
+
+            <div id="submit-section" class="w-full">
+                <input type="text" id="player-name" maxlength="10" placeholder="닉네임 입력 (최대 10자)" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-center text-lg focus:outline-none focus:border-rose-400 transition-colors mb-4 font-bold">
+                <button id="submit-score-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md transform transition hover:scale-[1.02] active:scale-[0.98] text-xl">
+                    랭킹 등록하기
+                </button>
+            </div>
+            
+            <div id="loading-section" class="hidden flex-col items-center w-full py-4">
+                <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                <p class="text-slate-500 text-sm font-semibold">데이터베이스 저장 중...</p>
+            </div>
+
+            <button id="skip-btn" class="mt-4 text-slate-400 hover:text-slate-600 text-sm transition-colors underline">
+                등록 안하고 다시하기
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global / Firebase Configuration
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'apple-game-local';
+        const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        let firebaseConfig = {};
+        try { firebaseConfig = JSON.parse(firebaseConfigStr); } catch (e) {}
+        
+        let app, auth, db, currentUser;
+        let firebaseReady = false;
+
+        async function initFirebase() {
+            if (!Object.keys(firebaseConfig).length) {
+                document.getElementById('start-leaderboard').innerHTML = '<div class="text-center text-rose-400 py-4">데이터베이스 연결 없음 (로컬 모드)</div>';
+                return;
+            }
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                const customToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (customToken) {
+                    await signInWithCustomToken(auth, customToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                currentUser = auth.currentUser;
+                firebaseReady = true;
+                await fetchLeaderboard();
+            } catch (error) {
+                console.error("Firebase init error:", error);
+                document.getElementById('start-leaderboard').innerHTML = '<div class="text-center text-rose-400 py-4">랭킹 서버 접속 실패</div>';
+            }
+        }
+
+        // Game Constants
+        const COLS = 17;
+        const ROWS = 10;
+        const GAME_TIME = 120; // 120 seconds
+        
+        // DOM Elements
+        const board = document.getElementById('game-board');
+        const selectionBox = document.getElementById('selection-box');
+        const scoreDisplay = document.getElementById('score-display');
+        const timeDisplay = document.getElementById('time-display');
+        const sumPreview = document.getElementById('sum-preview');
+        
+        // Screens
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const gameOverContent = document.getElementById('game-over-content');
+        
+        // Game State
+        let apples = []; // Array of { element, value, cleared, row, col }
+        let score = 0;
+        let timeLeft = GAME_TIME;
+        let timerInterval = null;
+        let isPlaying = false;
+
+        // Drag State
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let currentX = 0, currentY = 0;
+        let boardRect = null;
+
+        function generateGrid() {
+            board.innerHTML = '<div id="selection-box"></div>'; // Clear previous
+            apples = [];
+            
+            // Re-grab selection box since we reset innerHTML
+            const selBox = document.getElementById('selection-box');
+            
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const val = Math.floor(Math.random() * 9) + 1; // 1 to 9
+                    
+                    const appleEl = document.createElement('div');
+                    appleEl.className = 'apple num-font';
+                    appleEl.innerText = val;
+                    appleEl.dataset.row = r;
+                    appleEl.dataset.col = c;
+                    
+                    board.appendChild(appleEl);
+                    
+                    apples.push({
+                        element: appleEl,
+                        value: val,
+                        cleared: false,
+                        row: r,
+                        col: c
+                    });
+                }
+            }
+        }
+
+        function startGame() {
+            score = 0;
+            timeLeft = GAME_TIME;
+            scoreDisplay.innerText = score;
+            timeDisplay.innerText = timeLeft;
+            
+            generateGrid();
+            
+            startScreen.style.display = 'none';
+            isPlaying = true;
+            
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeDisplay.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(timerInterval);
+            
+            document.getElementById('final-score-display').innerText = score;
+            
+            // Reset UI for submission
+            document.getElementById('submit-section').classList.remove('hidden');
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('skip-btn').classList.remove('hidden');
+            document.getElementById('player-name').value = '';
+
+            gameOverScreen.classList.remove('hidden');
+            gameOverScreen.classList.add('flex');
+            
+            // Small delay to allow display block to apply before animating opacity
+            setTimeout(() => {
+                gameOverScreen.classList.remove('opacity-0');
+                gameOverContent.classList.remove('scale-95');
+            }, 50);
+        }
+
+        function getEventPos(e) {
+            // Get position relative to the board
+            if (!boardRect) boardRect = board.getBoundingClientRect();
+            let clientX, clientY;
+
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            return {
+                x: clientX - boardRect.left,
+                y: clientY - boardRect.top
+            };
+        }
+
+        function handlePointerDown(e) {
+            if (!isPlaying) return;
+            
+            // Only trigger if clicking inside board (ignoring gaps slightly if needed, but simple bounding box is fine)
+            if (e.target.closest('#game-board')) {
+                // Prevent default touch actions (like scrolling/refresh)
+                if(e.type === 'touchstart' && e.cancelable) e.preventDefault(); 
+                
+                boardRect = board.getBoundingClientRect();
+                const pos = getEventPos(e);
+                
+                isDragging = true;
+                startX = pos.x;
+                startY = pos.y;
+                currentX = pos.x;
+                currentY = pos.y;
+                
+                updateSelectionBox();
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (!isDragging || !isPlaying) return;
+            if(e.type === 'touchmove' && e.cancelable) e.preventDefault();
+            
+            const pos = getEventPos(e);
+            
+            // Constrain inside board
+            currentX = Math.max(0, Math.min(pos.x, boardRect.width));
+            currentY = Math.max(0, Math.min(pos.y, boardRect.height));
+            
+            updateSelectionBox();
+            highlightSelectedApples();
+        }
+
+        function handlePointerUp(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            const selBox = document.getElementById('selection-box');
+            selBox.style.display = 'none';
+            sumPreview.style.opacity = '0';
+            
+            processSelection();
+        }
+
+        function updateSelectionBox() {
+            const selBox = document.getElementById('selection-box');
+            const left = Math.min(startX, currentX);
+            const top = Math.min(startY, currentY);
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+
+            selBox.style.display = 'block';
+            selBox.style.left = left + 'px';
+            selBox.style.top = top + 'px';
+            selBox.style.width = width + 'px';
+            selBox.style.height = height + 'px';
+        }
+
+        function highlightSelectedApples() {
+            const left = Math.min(startX, currentX);
+            const right = Math.max(startX, currentX);
+            const top = Math.min(startY, currentY);
+            const bottom = Math.max(startY, currentY);
+
+            let currentSum = 0;
+
+            apples.forEach(apple => {
+                if (apple.cleared) return;
+                
+                // Get apple relative bounding box
+                const el = apple.element;
+                const rect = el.getBoundingClientRect();
+                const aLeft = rect.left - boardRect.left;
+                const aRight = rect.right - boardRect.left;
+                const aTop = rect.top - boardRect.top;
+                const aBottom = rect.bottom - boardRect.top;
+
+                // Simple AABB Collision
+                const isOverlapping = !(aRight < left || aLeft > right || aBottom < top || aTop > bottom);
+
+                if (isOverlapping) {
+                    el.classList.add('selected');
+                    currentSum += apple.value;
+                } else {
+                    el.classList.remove('selected');
+                }
+            });
+
+            if (currentSum > 0) {
+                sumPreview.innerText = `합계: ${currentSum}`;
+                sumPreview.style.opacity = '1';
+                sumPreview.style.color = currentSum === 10 ? '#22c55e' : (currentSum > 10 ? '#ef4444' : '#3b82f6');
+            } else {
+                sumPreview.style.opacity = '0';
+            }
+        }
+
+        function processSelection() {
+            let selectedApples = [];
+            let sum = 0;
+
+            apples.forEach(apple => {
+                if (!apple.cleared && apple.element.classList.contains('selected')) {
+                    selectedApples.push(apple);
+                    sum += apple.value;
+                    apple.element.classList.remove('selected'); // reset visually
+                }
+            });
+
+            if (sum === 10) {
+                // Success!
+                selectedApples.forEach(apple => {
+                    apple.cleared = true;
+                    apple.element.classList.add('cleared');
+                });
+                
+                // Score = number of apples cleared (traditional rule)
+                score += selectedApples.length;
+                scoreDisplay.innerText = score;
+                
+                // Minor pulse effect on score
+                scoreDisplay.classList.add('scale-150');
+                setTimeout(() => scoreDisplay.classList.remove('scale-150'), 200);
+            }
+        }
+
+        // Attach Event Listeners to board container area
+        // We use window for mouseup/move to ensure drag doesn't break if cursor leaves board
+        board.addEventListener('mousedown', handlePointerDown);
+        window.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', handlePointerUp);
+        
+        board.addEventListener('touchstart', handlePointerDown, { passive: false });
+        window.addEventListener('touchmove', handlePointerMove, { passive: false });
+        window.addEventListener('touchend', handlePointerUp);
+
+        async function fetchLeaderboard() {
+            if (!firebaseReady) return;
+            const listEl = document.getElementById('start-leaderboard');
+            try {
+                // RULE 1: Strict path, RULE 2: Simple query
+                const lbRef = collection(db, 'artifacts', appId, 'public', 'data', 'apple_game_leaderboard');
+                const querySnapshot = await getDocs(lbRef);
+                
+                let scores = [];
+                querySnapshot.forEach((doc) => scores.push(doc.data()));
+                
+                // Sort descending in memory
+                scores.sort((a, b) => b.score - a.score);
+                scores = scores.slice(0, 10);
+
+                if (scores.length === 0) {
+                    listEl.innerHTML = '<div class="text-center text-slate-400 py-4">아직 기록이 없습니다. 1등에 도전하세요!</div>';
+                    return;
+                }
+
+                listEl.innerHTML = '';
+                scores.forEach((entry, i) => {
+                    const isTop3 = i < 3;
+                    const color = i === 0 ? 'text-amber-500' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-amber-700' : 'text-slate-500';
+                    const icon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
+                    
+                    listEl.innerHTML += `
+                        <div class="flex justify-between items-center bg-slate-50 p-3 px-4 rounded-xl border border-slate-100">
+                            <span class="font-bold ${color} w-8 text-xl">${icon}</span>
+                            <span class="flex-1 font-bold truncate px-3 text-slate-700">${entry.name}</span>
+                            <span class="num-font text-2xl font-bold text-blue-500">${entry.score}</span>
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                console.error(e);
+                listEl.innerHTML = '<div class="text-center text-rose-500 py-4">랭킹을 불러오는데 실패했습니다.</div>';
+            }
+        }
+
+        async function submitScore() {
+            const name = document.getElementById('player-name').value.trim() || '익명';
+            
+            // RULE 3: Guard auth
+            if (!firebaseReady || !currentUser) {
+                return resetToStart();
+            }
+
+            document.getElementById('submit-section').classList.add('hidden');
+            document.getElementById('loading-section').classList.remove('hidden');
+            document.getElementById('loading-section').classList.add('flex');
+            document.getElementById('skip-btn').classList.add('hidden');
+
+            try {
+                const lbRef = collection(db, 'artifacts', appId, 'public', 'data', 'apple_game_leaderboard');
+                await addDoc(lbRef, {
+                    userId: currentUser.uid,
+                    name: name,
+                    score: score,
+                    timestamp: Date.now()
+                });
+                await fetchLeaderboard();
+                resetToStart();
+            } catch (error) {
+                console.error(error);
+                // Fail gracefully
+                const errMsg = document.createElement('p');
+                errMsg.className = "text-rose-500 mt-2 text-sm";
+                errMsg.innerText = "저장 실패! 다시 시도해주세요.";
+                document.getElementById('loading-section').appendChild(errMsg);
+                setTimeout(resetToStart, 2000);
+            }
+        }
+
+        function resetToStart() {
+            gameOverScreen.classList.add('opacity-0');
+            gameOverContent.classList.add('scale-95');
+            
+            setTimeout(() => {
+                gameOverScreen.classList.add('hidden');
+                gameOverScreen.classList.remove('flex');
+                startScreen.style.display = 'flex';
+            }, 300);
+        }
+
+        // Button Listeners
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('submit-score-btn').addEventListener('click', submitScore);
+        document.getElementById('skip-btn').addEventListener('click', resetToStart);
+
+        // Initialize Firebase on load
+        initFirebase();
+        
+        // Disable context menu on board to prevent accidental right click drags
+        board.addEventListener('contextmenu', e => e.preventDefault());
+
+    </script>
+</body>
+</html>
