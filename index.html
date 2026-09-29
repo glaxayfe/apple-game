@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>사과게임 🍎 </title>
+    <title>사과게임 🍎 V2 </title>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #fdf6e3; font-family: 'Pretendard', sans-serif; touch-action: none; user-select: none; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+        /* 🧸 1번 후보: 따뜻한 크림 베이지 배경 */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff8e7; font-family: 'Pretendard', sans-serif; touch-action: none; user-select: none; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
         
-        /* 상단 UI (깔끔하고 고정된 형태) */
-        #header { width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; box-sizing: border-box; font-size: 24px; font-weight: 900; color: #2d3436; }
-        .score-box { background: #ffeaa7; padding: 10px 20px; border-radius: 8px; color: #d63031; }
-        .time-box { background: #dfe6e9; padding: 10px 20px; border-radius: 8px; }
+        /* 상단 UI (부드러운 브라운 텍스트) */
+        #header { width: 100%; max-width: 800px; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; box-sizing: border-box; font-size: 24px; font-weight: 800; color: #5c4a3d; }
+        .score-box { background: #fff; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 0 #f0e6d2; color: #ff6b6b; border: 2px solid #f0e6d2; }
+        .time-box { background: #fff; padding: 10px 20px; border-radius: 12px; box-shadow: 0 4px 0 #f0e6d2; border: 2px solid #f0e6d2; }
 
-        /* 게임 보드 컨테이너 */
         #board-container { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 800px; padding: 10px; box-sizing: border-box; }
         
-        /* 17x10 그리드 - 흔들림 방지를 위해 고정된 크기 부여 */
-        #board { display: grid; grid-template-columns: repeat(17, 1fr); gap: 2px; width: 100%; aspect-ratio: 17/10; background: #e3d5c8; padding: 5px; border-radius: 10px; position: relative; }
+        /* 흔들림 없는 고정된 게임 보드 */
+        #board { display: grid; grid-template-columns: repeat(17, 1fr); gap: 3px; width: 100%; aspect-ratio: 17/10; background: #fdf3df; padding: 8px; border-radius: 16px; border: 3px solid #f0e6d2; position: relative; }
         
-        /* 사과 디자인 (애니메이션 싹 다 제거, 눈 편안하게) */
+        /* 🧸 사과 디자인 (둥글고 귀여운 무광 파스텔톤, 애니메이션 제거) */
         .apple { 
-            background: #ff4757; 
+            background: #ff6b6b; 
             color: white; 
             display: flex; 
             justify-content: center; 
@@ -30,51 +30,57 @@
             font-weight: 900; 
             font-size: min(3.5vw, 22px); 
             cursor: pointer; 
-            border-radius: 4px;
-            /* 애니메이션(transition, transform) 삭제로 어지러움 완벽 해결 */
+            border-radius: 50%; /* 완전한 동그라미 */
+            box-shadow: 0 4px 0 #d93838; /* 아래쪽 입체감 그림자 */
+            margin-bottom: 4px; /* 그림자 공간 */
         }
         
-        /* 드래그 선택 시 (크기 안 변하고 색깔만 직관적으로 바뀜) */
+        /* 잎사귀 포인트 */
+        .apple::after {
+            content: ''; position: absolute; top: -2px; right: 2px; width: 6px; height: 6px;
+            background: #8ce99a; border-radius: 50% 0 50% 0;
+        }
+        
+        /* 드래그 선택 시 (크기 변화 없이 색만 노랗게) */
         .apple.selected { 
             background: #feca57; 
-            color: #2d3436; 
+            box-shadow: 0 4px 0 #e59a18;
+            color: #5c4a3d; 
         }
         
-        /* 사과 터졌을 때 (부드럽게 사라지는 효과 X, 즉시 투명화) */
+        /* 사과 터졌을 때 */
         .apple.cleared { 
-            background: transparent; 
-            color: transparent; 
-            pointer-events: none; 
+            visibility: hidden; /* 공간은 차지하되 깔끔하게 사라짐 */
         }
 
-        /* 팝업 패널 */
-        .panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #ffffff; padding: 35px 25px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); text-align: center; z-index: 100; width: 85%; max-width: 380px; display: none; border: 3px solid #2d3436; }
-        .panel h1 { margin-top: 0; color: #d63031; font-size: 32px; font-weight: 900; }
+        /* 팝업 모달창 (둥글둥글) */
+        .panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #ffffff; padding: 35px 25px; border-radius: 24px; box-shadow: 0 10px 40px rgba(92, 74, 61, 0.2); text-align: center; z-index: 100; width: 85%; max-width: 380px; display: none; border: 4px solid #f0e6d2; }
+        .panel h1 { margin-top: 0; color: #ff6b6b; font-size: 30px; font-weight: 900; }
+        .panel p { color: #8e7b6d; font-size: 16px; line-height: 1.5; font-weight: 600; }
         
-        button { background: #d63031; color: white; border: none; padding: 16px; font-size: 18px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
-        button.alt-btn { background: #2d3436; }
+        button { background: #ff6b6b; color: white; border: none; padding: 16px; font-size: 18px; border-radius: 12px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; box-shadow: 0 4px 0 #d93838; }
+        button:active { transform: translateY(4px); box-shadow: 0 0 0 transparent; } /* 누르는 손맛 */
+        button.alt-btn { background: #ffd43b; color: #5c4a3d; box-shadow: 0 4px 0 #e59a18; }
         
-        input { width: 100%; padding: 15px; margin: 15px 0; border-radius: 8px; border: 2px solid #dfe6e9; font-size: 18px; text-align: center; box-sizing: border-box; outline: none; font-weight: bold; }
-        input:focus { border-color: #d63031; }
+        input { width: 100%; padding: 15px; margin: 15px 0; border-radius: 12px; border: 2px solid #f0e6d2; font-size: 18px; text-align: center; box-sizing: border-box; outline: none; font-weight: bold; color: #5c4a3d; background: #fff8e7; }
+        input:focus { border-color: #ff6b6b; }
         
         /* 랭킹 리스트 */
-        .leaderboard-list { list-style: none; padding: 0; margin: 20px 0; text-align: left; max-height: 250px; overflow-y: auto; }
-        .leaderboard-list li { display: flex; justify-content: space-between; padding: 12px 10px; border-bottom: 1px solid #f1f2f6; font-size: 18px; color: #2d3436; font-weight: 600; }
-        .leaderboard-list li span:nth-child(2) { color: #d63031; font-weight: 900; }
-        .leaderboard-list li:nth-child(1) { background: #fff3cd; border-radius: 8px; }
+        .leaderboard-list { list-style: none; padding: 0; margin: 20px 0; text-align: left; max-height: 250px; overflow-y: auto; font-weight: 700; color: #5c4a3d; }
+        .leaderboard-list li { display: flex; justify-content: space-between; padding: 12px 15px; border-bottom: 2px dashed #f0e6d2; font-size: 18px; }
+        .leaderboard-list li span:nth-child(2) { color: #ff6b6b; font-weight: 900; }
+        .leaderboard-list li:nth-child(1) { background: #fdf3df; border-radius: 12px; border: none; }
         
         #startPanel { display: block; }
     </style>
 </head>
 <body>
 
-    <!-- 상단 UI -->
     <div id="header">
         <div class="score-box">점수: <span id="score">0</span></div>
         <div class="time-box">⏳ <span id="time">90</span>초</div>
     </div>
 
-    <!-- 게임 판 -->
     <div id="board-container">
         <div id="board"></div>
     </div>
@@ -82,32 +88,32 @@
     <!-- 시작 화면 -->
     <div class="panel" id="startPanel">
         <h1>사과게임 🍎</h1>
-        <p>드래그해서 사과 숫자의 합을<br><b>정확히 10</b>으로 만드세요!<br>(크기 안 변함 / 90초 룰)</p>
-        <button onclick="startGame()">▶ 게임 시작</button>
-        <button onclick="showLeaderboard()" class="alt-btn">🏆 실시간 랭킹</button>
+        <p>드래그해서 사과 숫자의 합을<br><b>정확히 10</b>으로 만드세요!<br><br>✨ 어지러움 방지 모드 켜짐 ✨</p>
+        <button onclick="startGame()">▶ 90초 게임 시작</button>
+        <button onclick="showLeaderboard()" class="alt-btn">🏆 실시간 랭킹 (친구내기용)</button>
     </div>
 
     <!-- 종료 화면 -->
     <div class="panel" id="gameOverPanel">
-        <h1 style="color: #2d3436;">종료!</h1>
-        <p style="font-size: 22px;">최종 점수: <b id="finalScore" style="color: #d63031; font-size: 36px;">0</b>점</p>
+        <h1 style="color: #5c4a3d;">시간 종료!</h1>
+        <p style="font-size: 22px;">최종 점수: <b id="finalScore" style="color: #ff6b6b; font-size: 36px;">0</b>점</p>
         <input type="text" id="playerName" placeholder="닉네임 (최대 10자)" maxlength="10">
-        <button onclick="submitScore()" id="submitBtn">랭킹 등록하기</button>
-        <button onclick="location.reload()" class="alt-btn">다시 하기</button>
+        <button onclick="submitScore()" id="submitBtn">서버에 랭킹 등록하기</button>
+        <button onclick="location.reload()" class="alt-btn" style="background: #f0e6d2; box-shadow: 0 4px 0 #dcd0b8;">다시 하기</button>
     </div>
 
     <!-- 랭킹 화면 -->
     <div class="panel" id="leaderboardPanel">
         <h1>🏆 명예의 전당</h1>
         <ul class="leaderboard-list" id="leaderboardList">
-            <li>데이터를 불러오는 중...</li>
+            <li>서버에서 불러오는 중...⏳</li>
         </ul>
         <button onclick="closeLeaderboard()" class="alt-btn">닫기</button>
     </div>
 
 <script>
-    // 💡 차단(CORS) 없는 100% 무결점 IoT 데이터베이스(Dweet) 사용
-    const RANKING_ROOM_ID = "apple-game-ranking-super-battle-2026"; 
+    // 🚀 보안 에러(CORS) 원천 차단! 친구들끼리 무조건 되는 고유 랭킹 방
+    const RANK_ROOM = "apple_battle_friends_2026_top"; 
 
     const COLS = 17;
     const ROWS = 10;
@@ -116,7 +122,7 @@
     let startX = -1, startY = -1;
     let currentX = -1, currentY = -1;
     let score = 0;
-    let timeLeft = 90;
+    let timeLeft = 90; // 90초 룰
     let timerId = null;
     let isPlaying = false;
 
@@ -145,7 +151,7 @@
         }
     }
 
-    // 마우스 및 터치 이벤트 로직
+    // 마우스 및 터치 드래그 기능 (흔들림 없음)
     function getTargetPos(e) {
         let clientX = e.touches ? e.touches[0].clientX : e.clientX;
         let clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -183,7 +189,6 @@
         checkSelectionSum();
     }
 
-    // 드래그 박스 영역 하이라이트
     function updateSelection() {
         let minX = Math.min(startX, currentX);
         let maxX = Math.max(startX, currentX);
@@ -201,7 +206,6 @@
         });
     }
 
-    // 합계 계산
     function checkSelectionSum() {
         let selected = apples.filter(a => a.el.classList.contains('selected') && !a.cleared);
         let sum = selected.reduce((acc, curr) => acc + curr.val, 0);
@@ -210,7 +214,7 @@
             selected.forEach(a => {
                 a.cleared = true;
                 a.el.classList.remove('selected');
-                a.el.classList.add('cleared'); // 애니메이션 없이 바로 투명해짐
+                a.el.classList.add('cleared'); // 효과 없이 즉시 깔끔하게 사라짐
             });
             score += selected.length * 10;
             document.getElementById('score').innerText = score;
@@ -226,7 +230,6 @@
     window.addEventListener('touchmove', doDrag, {passive: false});
     window.addEventListener('touchend', endDrag);
 
-    // 게임 타이머
     function startGame() {
         document.getElementById('startPanel').style.display = 'none';
         initGame();
@@ -244,18 +247,34 @@
         }, 1000);
     }
 
-    // --- 절대 막히지 않는 실시간 랭킹 (Dweet API) ---
+    // --- 🚀 통신 에러를 100% 막아내는 우회 방식 서버 (GET 메서드 전용) ---
     async function fetchLeaderboard() {
         try {
-            let res = await fetch(`https://dweet.io/get/latest/dweet/for/${RANKING_ROOM_ID}`);
-            if (!res.ok) return [];
+            // GET 방식으로 데이터 가져오기 (보안 차단 안 당함)
+            let res = await fetch(`https://dweet.io/get/dweets/for/${RANK_ROOM}`);
             let data = await res.json();
             
-            // 데이터가 존재하면 랭킹 배열을 반환
-            if (data.this === "succeeded" && data.with && data.with.length > 0) {
-                return data.with[0].content.leaderboard || [];
+            let ranks = [];
+            if (data.with && data.with.length > 0) {
+                data.with.forEach(d => {
+                    if(d.content && d.content.name && d.content.score !== undefined) {
+                        ranks.push({ name: d.content.name, score: parseInt(d.content.score) });
+                    }
+                });
             }
-            return [];
+            
+            // 이름별 최고 점수만 묶어주기
+            let bestScores = {};
+            ranks.forEach(r => {
+                if(!bestScores[r.name] || bestScores[r.name] < r.score) {
+                    bestScores[r.name] = r.score;
+                }
+            });
+            
+            let finalRanks = Object.keys(bestScores).map(k => ({ name: k, score: bestScores[k] }));
+            finalRanks.sort((a, b) => b.score - a.score);
+            return finalRanks.slice(0, 15); // 상위 15명
+
         } catch(e) {
             console.error(e);
             return [];
@@ -272,12 +291,12 @@
         let data = await fetchLeaderboard();
         
         list.innerHTML = "";
-        if (!data || data.length === 0) {
-            list.innerHTML = "<li>등록된 랭킹이 없습니다! 1등을 차지하세요!</li>";
+        if (data.length === 0) {
+            list.innerHTML = "<li>등록된 랭킹이 없습니다! 첫 1등이 되어보세요.</li>";
             return;
         }
         
-        data.sort((a, b) => b.score - a.score).slice(0, 15).forEach((entry, idx) => {
+        data.forEach((entry, idx) => {
             let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx+1}.`;
             list.innerHTML += `<li><span>${medal} ${entry.name}</span> <span>${entry.score}점</span></li>`;
         });
@@ -291,32 +310,26 @@
     }
 
     async function submitScore() {
-        const name = document.getElementById('playerName').value.trim() || "익명";
+        let name = document.getElementById('playerName').value.trim();
+        if(!name) name = "익명";
         const btn = document.getElementById('submitBtn');
-        btn.innerText = "서버 기록 중...";
+        btn.innerText = "서버 전송 중...";
         btn.disabled = true;
 
         try {
-            // 1. 현재 랭킹 불러오기
-            let currentBoard = await fetchLeaderboard();
-            
-            // 2. 내 점수 추가하고 정렬
-            currentBoard.push({ name: name, score: score });
-            currentBoard.sort((a, b) => b.score - a.score);
-            currentBoard = currentBoard.slice(0, 20); // 탑 20명만 유지
-
-            // 3. 서버에 저장 (CORS 차단 없음)
-            await fetch(`https://dweet.io/dweet/for/${RANKING_ROOM_ID}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leaderboard: currentBoard })
-            });
+            // 🚀 핵심 기술: 주소창으로 점수를 쏴버리기 (POST가 아니라 GET이라 절대 안 막힘)
+            let sendUrl = `https://dweet.io/dweet/for/${RANK_ROOM}?name=${encodeURIComponent(name)}&score=${score}`;
+            await fetch(sendUrl);
 
             document.getElementById('gameOverPanel').style.display = 'none';
-            showLeaderboard();
+            // 데이터 등록 시간을 위해 0.5초 대기 후 랭킹판 띄우기
+            setTimeout(() => {
+                showLeaderboard();
+            }, 500);
+
         } catch(e) {
-            alert("통신 오류! 잠시 후 다시 시도해주세요.");
-            btn.innerText = "랭킹 등록하기";
+            alert("인터넷 연결을 확인해주세요!");
+            btn.innerText = "서버에 랭킹 등록하기";
             btn.disabled = false;
         }
     }
